@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-
 public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
 
 	public static String PLUGIN_NAME = "analysis-ik";

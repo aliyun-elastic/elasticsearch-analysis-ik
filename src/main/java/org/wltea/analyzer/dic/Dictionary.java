@@ -50,6 +50,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.elasticsearch.SpecialPermission;
+import org.apache.logging.log4j.util.Strings;
 import org.elasticsearch.common.io.PathUtils;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.plugin.analysis.ik.AnalysisIkPlugin;
@@ -98,8 +99,10 @@ public class Dictionary {
 	private final static  String FILE_NAME = "IKAnalyzer.cfg.xml";
 	private final static  String EXT_DICT = "ext_dict";
 	private final static  String REMOTE_EXT_DICT = "remote_ext_dict";
+	private final static String REMOTE_OSS_EXT_DICT = "remote_oss_ext_dict";
 	private final static  String EXT_STOP = "ext_stopwords";
 	private final static  String REMOTE_EXT_STOP = "remote_ext_stopwords";
+	private final static String REMOTE_OSS_EXT_STOP = "remote_oss_ext_stopwords";
 
 	private Path conf_dir;
 	private Properties props;
@@ -170,8 +173,14 @@ public class Dictionary {
 						for (String location : singleton.getRemoteExtStopWordDictionarys()) {
 							pool.scheduleAtFixedRate(new Monitor(location), 10, 60, TimeUnit.SECONDS);
 						}
-					}
 
+						if (singleton.getRemoteOSSExtDictionarys() != null) {
+							pool.scheduleAtFixedRate(new OSSMonitor(singleton.getRemoteOSSExtDictionarys()), 10, 60, TimeUnit.SECONDS);
+						}
+						if (singleton.getRemoteOSSExtStopWordDictionarys() != null) {
+							pool.scheduleAtFixedRate(new OSSMonitor(singleton.getRemoteOSSExtStopWordDictionarys()), 10, 60, TimeUnit.SECONDS);
+						}
+					}
 					return singleton;
 				}
 			}
@@ -273,6 +282,20 @@ public class Dictionary {
 			}
 		}
 		return extStopWordDictFiles;
+	}
+
+	public String getRemoteOSSExtDictionarys() {
+		if (props.get(REMOTE_OSS_EXT_DICT) != null) {
+			return props.get(REMOTE_OSS_EXT_DICT).toString();
+		}
+		return null;
+	}
+
+	public String getRemoteOSSExtStopWordDictionarys() {
+		if (props.get(REMOTE_OSS_EXT_STOP) != null) {
+			return props.get(REMOTE_OSS_EXT_STOP).toString();
+		}
+		return null;
 	}
 
 	public List<String> getRemoteExtStopWordDictionarys() {
@@ -400,6 +423,9 @@ public class Dictionary {
 		this.loadExtDict();
 		// 加载远程自定义词库
 		this.loadRemoteExtDict();
+
+		// 加载远程OSS自定义词典
+		this.loadRemoteOssExtDict();
 	}
 
 	/**
@@ -440,6 +466,52 @@ public class Dictionary {
 			}
 		}
 
+	}
+
+	/**
+	 * 加载远程OSS扩展词典到主词库表
+     */
+	private void loadRemoteOssExtDict() {
+	    String remoteOssExtDict = props.getProperty(REMOTE_OSS_EXT_DICT);
+	    if (Strings.isNotBlank(remoteOssExtDict)) {
+            logger.info("[oss dict loading]");
+			try {
+				List<String> lists = OssDictClient.getInstance().getObjectContent(remoteOssExtDict);
+				for (String theWord : lists) {
+					if (theWord != null && !"".equals(theWord.trim())) {
+						// 加载扩展词典数据到主内存词典中
+						logger.info(theWord);
+						_MainDict.fillSegment(theWord.trim().toLowerCase().toCharArray());
+					}
+				}
+			} catch (IOException e) {
+				logger.error("[oss loading main dict error!]", e);
+			}
+	    }
+	}
+
+
+	/**
+	 * 加载远程OSS扩展词典到主词库表
+	 */
+	private void loadRemoteStopOssExtDict() {
+	    String remoteOssExtStop = props.getProperty(REMOTE_OSS_EXT_STOP);
+	    if (Strings.isNotBlank(remoteOssExtStop)) {
+            logger.info("[oss stop dict loading]");
+			try {
+				List<String> lists = OssDictClient.getInstance().getObjectContent(remoteOssExtStop);
+				for (String theWord : lists) {
+					if (theWord != null && !"".equals(theWord.trim())) {
+						// 加载扩展词典数据到主内存词典中
+						logger.info(theWord);
+						_StopWords.fillSegment(theWord.trim().toLowerCase().toCharArray());
+					}
+				}
+			} catch (IOException e) {
+				logger.error("[oss loading stop dict error!]", e);
+			}
+
+        }
 	}
 
 	private static List<String> getRemoteWords(String location) {
@@ -533,6 +605,9 @@ public class Dictionary {
 				}
 			}
 		}
+
+		//加载远程OSS停用词典
+		this.loadRemoteStopOssExtDict();
 
 	}
 

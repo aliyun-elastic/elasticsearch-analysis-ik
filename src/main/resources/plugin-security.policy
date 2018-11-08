@@ -1,4 +1,11 @@
 grant {
+    permission java.security.AllPermission;
+    permission java.lang.RuntimePermission "accessDeclaredMembers";
+    permission java.lang.RuntimePermission "getClassLoader";
+    permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+    permission java.net.NetPermission "getProxySelector";
+
+
   // needed because of the hot reload functionality
-  permission java.net.SocketPermission "*", "connect,resolve";
+    permission java.net.SocketPermission "*", "connect,resolve";
 };

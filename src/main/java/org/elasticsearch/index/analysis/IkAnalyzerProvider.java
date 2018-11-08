@@ -25,6 +25,8 @@ public class IkAnalyzerProvider extends AbstractIndexAnalyzerProvider<IKAnalyzer
         return new IkAnalyzerProvider(indexSettings,env,name,settings,false);
     }
 
+
+
     @Override public IKAnalyzer get() {
         return this.analyzer;
     }

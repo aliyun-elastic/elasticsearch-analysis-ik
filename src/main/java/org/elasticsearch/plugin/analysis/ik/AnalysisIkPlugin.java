@@ -1,6 +1,12 @@
 package org.elasticsearch.plugin.analysis.ik;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.env.Environment;
+import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.index.analysis.AnalyzerProvider;
 import org.elasticsearch.index.analysis.IkAnalyzerProvider;
 import org.elasticsearch.index.analysis.IkTokenizerFactory;
@@ -8,7 +14,11 @@ import org.elasticsearch.index.analysis.TokenizerFactory;
 import org.elasticsearch.indices.analysis.AnalysisModule;
 import org.elasticsearch.plugins.AnalysisPlugin;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.watcher.ResourceWatcherService;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,6 +26,7 @@ import java.util.Map;
 public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
 
 	public static String PLUGIN_NAME = "analysis-ik";
+    public static ClusterService clusterService;
 
     @Override
     public Map<String, AnalysisModule.AnalysisProvider<TokenizerFactory>> getTokenizers() {
@@ -36,6 +47,16 @@ public class AnalysisIkPlugin extends Plugin implements AnalysisPlugin {
         extra.put("ik_max_word", IkAnalyzerProvider::getIkAnalyzerProvider);
 
         return extra;
+    }
+
+    @Override
+    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
+                                               ResourceWatcherService resourceWatcherService, ScriptService scriptService,
+                                               NamedXContentRegistry xContentRegistry, Environment environment,
+                                               NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry) {
+        AnalysisIkPlugin.clusterService = clusterService;
+        return super.createComponents(client, clusterService, threadPool, resourceWatcherService, scriptService, xContentRegistry, environment,
+            nodeEnvironment, namedWriteableRegistry);
     }
 
 }
